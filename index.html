@@ -144,7 +144,7 @@ async function main() {
   }
 
   const photoHtml = item.has_photo
-    ? '<img src="img/' + encodeURIComponent(item.code) + '.jpg" alt="Foto de ' + escapeHtml(item.code) + '">'
+    ? '<img src="' + encodeURIComponent(item.code) + '.jpg" alt="Foto de ' + escapeHtml(item.code) + '">'
     : noPhotoSvg();
 
   const fields = [
