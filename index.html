@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ficha de Activo - GSP</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    background: #f2f4f7;
+    margin: 0;
+    padding: 16px;
+    color: #1f2937;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  .brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: #1F4E78;
+    font-weight: bold;
+    font-size: 15px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    overflow: hidden;
+  }
+  .photo-wrap {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #e5e9ee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .photo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #fff;
+  }
+  .no-photo {
+    color: #9aa4b2;
+    font-size: 13px;
+    text-align: center;
+    padding: 20px;
+  }
+  .no-photo svg { width: 40px; height: 40px; margin-bottom: 8px; opacity: 0.6; }
+  .body { padding: 18px 20px 22px 20px; }
+  .code-badge {
+    display: inline-block;
+    background: #1F4E78;
+    color: #fff;
+    font-weight: bold;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-size: 19px;
+    margin: 0 0 14px 0;
+    line-height: 1.35;
+    color: #1f2937;
+  }
+  .field {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 0;
+    border-top: 1px solid #eef0f3;
+    font-size: 14px;
+  }
+  .field .label { color: #6b7280; flex-shrink: 0; }
+  .field .value { text-align: right; font-weight: 600; color: #1f2937; }
+  .estado-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #e6f4ea;
+    color: #1e7b34;
+  }
+  .footer-note {
+    text-align: center;
+    font-size: 12px;
+    color: #9aa4b2;
+    margin-top: 14px;
+  }
+  .error-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 30px 20px;
+    text-align: center;
+    color: #6b7280;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+  }
+  .loading {
+    text-align: center;
+    color: #9aa4b2;
+    padding: 40px 0;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">INVENTARIO DE ACTIVOS &middot; GSP</div>
+  <div id="content" class="loading">Cargando ficha…</div>
+</div>
+
+<script>
+async function main() {
+  const params = new URLSearchParams(window.location.search);
+  const code = (params.get('code') || '').trim().toUpperCase();
+  const content = document.getElementById('content');
+
+  if (!code) {
+    content.innerHTML = '<div class="error-box">No se especificó ningún código.<br>Escanea un QR de un activo para ver su ficha.</div>';
+    return;
+  }
+
+  let items;
+  try {
+    const res = await fetch('items.json');
+    items = await res.json();
+  } catch (e) {
+    content.innerHTML = '<div class="error-box">No se pudo cargar la base de datos de activos.</div>';
+    return;
+  }
+
+  const item = items.find(it => (it.code || '').toUpperCase() === code);
+  if (!item) {
+    content.innerHTML = '<div class="error-box">No se encontró el código <b>' + escapeHtml(code) + '</b>.</div>';
+    return;
+  }
+
+  const photoHtml = item.has_photo
+    ? '<img src="img/' + encodeURIComponent(item.code) + '.jpg" alt="Foto de ' + escapeHtml(item.code) + '">'
+    : noPhotoSvg();
+
+  const fields = [
+    ['N° de serie', item.serie],
+    ['Ubicación actual', item.ubicacion],
+    ['Responsable', item.responsable],
+  ];
+
+  let fieldsHtml = '';
+  fields.forEach(([label, value]) => {
+    fieldsHtml += '<div class="field"><span class="label">' + label + '</span><span class="value">' + (value ? escapeHtml(value) : '<span style="color:#c1c7d0;font-weight:400;">No registrado</span>') + '</span></div>';
+  });
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="photo-wrap">${photoHtml}</div>
+      <div class="body">
+        <span class="code-badge">${escapeHtml(item.code)}</span>
+        <h1>${escapeHtml(item.desc || 'Sin descripción')}</h1>
+        ${fieldsHtml}
+        <div class="field">
+          <span class="label">Estado físico</span>
+          <span class="value"><span class="estado-pill">${escapeHtml(item.estado || 'N/D')}</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-note">Cambio de planta &middot; Sistema de codificación GSP</div>
+  `;
+}
+
+function noPhotoSvg() {
+  return '<div class="no-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 15l-5-5-9 9"/></svg><br>Sin evidencia fotográfica disponible</div>';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+main();
+</script>
+</body>
+</html>
